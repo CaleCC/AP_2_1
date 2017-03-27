@@ -4,6 +4,7 @@
 #include <math.h>
 #include <cuda.h>
 #include "common.h"
+#include <vector>
 
 #define NUM_THREADS 256
 
@@ -123,7 +124,7 @@ int main( int argc, char **argv )
     //
     particle_t * bin_seperate_p;
     int off_set = 2 * (n / bin_num);//assume the max number of particles in a bin is off_set
-    cudaMalloc((void **) &bin_particles, off_set * n * sizeof(*particle_t));
+    cudaMalloc((void **) &bin_seperate_p, off_set * n * sizeof(*particle_t));
     //a counter to keep the number of particles in each bin
     int* counter;
     cudaMalloc((void **) &counter, bin_num * sizeof(int));
