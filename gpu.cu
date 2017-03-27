@@ -77,12 +77,22 @@ __global__ void move_gpu (particle_t * particles, int n, double size)
 
 }
 
+__global__ void countParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row){
+    int threadId = threadIdx.x + blockIdx.x * blockDim.x;
+    int offset = gridDim.x * gridDim.x;
+    for(int i = threadId; i < n; i+=offset){
+      int x = floor(d_particles[i].x / binSize);
+      int y = floor(d_particles[i].y / binSize);
+      atomicAdd(counter+x + y * bins_row, 1);
+    }
+}
+
 
 
 int main( int argc, char **argv )
-{    
+{
     // This takes a few seconds to initialize the runtime
-    cudaThreadSynchronize(); 
+    cudaThreadSynchronize();
 
     if( find_option( argc, argv, "-h" ) >= 0 )
     {
@@ -92,17 +102,32 @@ int main( int argc, char **argv )
         printf( "-o <filename> to specify the output file name\n" );
         return 0;
     }
-    
+
     int n = read_int( argc, argv, "-n", 1000 );
 
     char *savename = read_string( argc, argv, "-o", NULL );
-    
+
     FILE *fsave = savename ? fopen( savename, "w" ) : NULL;
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
 
     // GPU particle data structure
-    particle_t * d_particles;
+    particle_t *d_particles;
     cudaMalloc((void **) &d_particles, n * sizeof(particle_t));
+    //bins size and number of bins
+    //
+    double binSize = cutoff;
+    double size = sqrt( density * n );
+    double bins_row = ceil(size/cutoff + 1);
+    double bin_num = bins_row * bins_row;
+    //cudamalloc another shared memory to store the particles seperated by bins
+    //
+    particle_t * bin_seperate_p;
+    int off_set = 2 * (n / bin_num);//assume the max number of particles in a bin is off_set
+    cudaMalloc((void **) &bin_particles, off_set * n * sizeof(*particle_t));
+    //a counter to keep the number of particles in each bin
+    int* counter;
+    cudaMalloc((void **) &counter, bin_num * sizeof(int));
+    cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
 
     set_size( n );
 
@@ -116,7 +141,7 @@ int main( int argc, char **argv )
 
     cudaThreadSynchronize();
     copy_time = read_timer( ) - copy_time;
-    
+
     //
     //  simulate a number of time steps
     //
@@ -125,18 +150,30 @@ int main( int argc, char **argv )
 
     for( int step = 0; step < NSTEPS; step++ )
     {
+        //compute the number of blocks
+        int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
+
+        //count the number of particles in each bins
+        cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
+        countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
+
+
+        for(int i = 0; i < binSize; i++){
+          printf("bin[%d]: %d \n",i,counter[i]);
+        }
+
         //
         //  compute forces
         //
 
-	int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
-	compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n);
-        
+	      //int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
+	        compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n);
+
         //
         //  move particles
         //
-	move_gpu <<< blks, NUM_THREADS >>> (d_particles, n, size);
-        
+	       move_gpu <<< blks, NUM_THREADS >>> (d_particles, n, size);
+
         //
         //  save if necessary
         //
@@ -144,18 +181,18 @@ int main( int argc, char **argv )
 	    // Copy the particles back to the CPU
             cudaMemcpy(particles, d_particles, n * sizeof(particle_t), cudaMemcpyDeviceToHost);
             save( fsave, n, particles);
-	}
+	         }
     }
     cudaThreadSynchronize();
     simulation_time = read_timer( ) - simulation_time;
-    
+
     printf( "CPU-GPU copy time = %g seconds\n", copy_time);
     printf( "n = %d, simulation time = %g seconds\n", n, simulation_time );
-    
+
     free( particles );
     cudaFree(d_particles);
     if( fsave )
         fclose( fsave );
-    
+
     return 0;
 }
