@@ -125,6 +125,7 @@ int main( int argc, char **argv )
     particle_t * bin_seperate_p;
     int off_set = 2 * (n / bin_num);//assume the max number of particles in a bin is off_set
     cudaMalloc((void **) &bin_seperate_p, off_set * n * sizeof(particle_t));
+    printf("allocate memory for bin_seperate finished, off_set %d \n", off_set);
     //a counter to keep the number of particles in each bin
     int* counter;
     cudaMalloc((void **) &counter, bin_num * sizeof(int));
@@ -148,16 +149,16 @@ int main( int argc, char **argv )
     //
     cudaThreadSynchronize();
     double simulation_time = read_timer( );
-
+    printf("start steps \n");
     for( int step = 0; step < NSTEPS; step++ )
     {
         //compute the number of blocks
         int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
-
+        printf("new setp bigins \n");
         //count the number of particles in each bins
         cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
         countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
-
+        printf("count particles finished \n");
 
         for(int i = 0; i < binSize; i++){
           printf("bin[%d]: %d \n",i,counter[i]);
