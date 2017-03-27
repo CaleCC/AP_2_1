@@ -154,15 +154,11 @@ int main( int argc, char **argv )
     {
         //compute the number of blocks
         int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
-        printf("new setp bigins \n");
+        //printf("new setp bigins \n");
         //count the number of particles in each bins
         cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
         countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
-        printf("count particles finished \n");
-
-        for(int i = 0; i < binSize; i++){
-          printf("bin[%d]: %d \n",i,counter[i]);
-        }
+        //printf("count particles finished \n");
 
         //
         //  compute forces
@@ -187,6 +183,11 @@ int main( int argc, char **argv )
     }
     cudaThreadSynchronize();
     simulation_time = read_timer( ) - simulation_time;
+    int *count_h = (int*)malloc(bin_num*sizeof(int));
+    cudaMemcpy(count_h,counter,bin_num*sizeof(int));
+    for(int i = 0; i <= =bin_num;i++){
+      printf("bin[%d] = %d\n" ,i, count_h[i]);
+    }
 
     printf( "CPU-GPU copy time = %g seconds\n", copy_time);
     printf( "n = %d, simulation time = %g seconds\n", n, simulation_time );
