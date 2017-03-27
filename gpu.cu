@@ -116,7 +116,7 @@ int main( int argc, char **argv )
     cudaMalloc((void **) &d_particles, n * sizeof(particle_t));
     //bins size and number of bins
     //
-    double binSize = 10*cutoff;
+    double binSize = 100*cutoff;
     double size = sqrt( density * n );
     double bins_row = ceil(size/cutoff + 1);
     double bin_num = bins_row * bins_row;
