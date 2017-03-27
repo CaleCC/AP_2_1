@@ -184,8 +184,8 @@ int main( int argc, char **argv )
     cudaThreadSynchronize();
     simulation_time = read_timer( ) - simulation_time;
     int *count_h = (int*)malloc(bin_num*sizeof(int));
-    cudaMemcpy(count_h,counter,bin_num*sizeof(int));
-    for(int i = 0; i <= =bin_num;i++){
+    cudaMemcpy(count_h,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
+    for(int i = 0; i <=bin_num;i++){
       printf("bin[%d] = %d\n" ,i, count_h[i]);
     }
 
