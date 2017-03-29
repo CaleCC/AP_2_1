@@ -116,9 +116,9 @@ int main( int argc, char **argv )
     cudaMalloc((void **) &d_particles, n * sizeof(particle_t));
     //bins size and number of bins
     //
-    double binSize = 100*cutoff;
+    double binSize = cutoff;
     double size = sqrt( density * n );
-    double bins_row = ceil(size/cutoff + 1);
+    double bins_row = ceil(size / cutoff) + 1;
     printf("bins_row = %d\n",bins_row);
     double bin_num = bins_row * bins_row;
     //cudamalloc another shared memory to store the particles seperated by bins
