@@ -189,7 +189,7 @@ int main( int argc, char **argv )
     int sum = 0;
     for(int i = 0; i <=bin_num;i++){
       printf("bin[%d] = %d\n" ,i, count_h[i]);
-      sum + = count_h[i];
+      sum += count_h[i];
     }
     printf("sum of all particles is %d\n" ,sum);
 
