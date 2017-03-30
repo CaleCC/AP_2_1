@@ -81,9 +81,11 @@ __global__ void move_gpu (particle_t * particles, int n, double size)
 __global__ void countParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row){
     int threadId = threadIdx.x + blockIdx.x * blockDim.x;
     int offset = gridDim.x * gridDim.x;
+    printf("ID %d\n",threadId);
     for(int i = threadId; i < n; i+=offset){
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
+      printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",i,d_particles[i].x,d_particles[i].y,x,y);
       atomicAdd(counter+x + y * bins_row, 1);
     }
 }
@@ -117,9 +119,12 @@ int main( int argc, char **argv )
     //bins size and number of bins
     //
     double binSize = cutoff;
+
     double size = sqrt( density * n );
-    double bins_row = ceil(size / cutoff) + 1;
-    printf("bins_row = %d\n",bins_row);
+
+    int bins_row = ceil(size / cutoff);
+    printf("size = %f binSize = %f bins_row = %d\n",size,binSize,bins_row);
+
     double bin_num = bins_row * bins_row;
     //cudamalloc another shared memory to store the particles seperated by bins
     //
@@ -151,7 +156,8 @@ int main( int argc, char **argv )
     cudaThreadSynchronize();
     double simulation_time = read_timer( );
     printf("start steps \n");
-    for( int step = 0; step < NSTEPS; step++ )
+    //for( int step = 0; step < NSTEPS; step++ )
+    for( int step = 0; step < 1; step++ )
     {
         //compute the number of blocks
         int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
