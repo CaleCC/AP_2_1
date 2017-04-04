@@ -85,7 +85,7 @@ __global__ void countParticles(particle_t *d_particles,int n,int* counter, doubl
     for(int i = threadId; i < n; i+=offset){
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
-      printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",i,d_particles[i].x,d_particles[i].y,x,y);
+      printf("threadIdx.x %d particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
       atomicAdd(counter+x + y * bins_row, 1);
     }
 }
