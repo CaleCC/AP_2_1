@@ -8,7 +8,7 @@
 
 #define NUM_THREADS 256
 
-extern double size;
+//extern double size;
 //
 //  benchmarking program
 //
@@ -38,7 +38,7 @@ __global__ void compute_forces_gpu(particle_t * particles, int n)
   // Get thread (particle) ID
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if(tid >= n) return;
-
+  printf("ID %d\n",tid);
   particles[tid].ax = particles[tid].ay = 0;
   for(int j = 0 ; j < n ; j++)
     apply_force_gpu(particles[tid], particles[j]);
@@ -157,7 +157,7 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
-    for( int step = 0; step < 1; step++ )
+    for( int step = 0; step <  1; step++ )
     {
         //compute the number of blocks
         int blks = (n + NUM_THREADS - 1) / NUM_THREADS;

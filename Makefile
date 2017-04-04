@@ -2,9 +2,9 @@
 # module load cuda
 #
 CC = nvcc
-CFLAGS = -O3 -arch=compute_35 -code=sm_35
-NVCCFLAGS = -O3 -arch=compute_35 -code=sm_35
-LIBS = 
+CFLAGS = -O3 -arch=compute_35 -g -code=sm_35
+NVCCFLAGS = -O3 -arch=compute_35 -g -code=sm_35
+LIBS =
 
 TARGETS = serial gpu
 
