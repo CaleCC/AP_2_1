@@ -166,7 +166,7 @@ int main( int argc, char **argv )
         cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
         countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
         //printf("count particles finished \n");
-
+        cudaThreadSynchronize();
         //
         //  compute forces
         //
