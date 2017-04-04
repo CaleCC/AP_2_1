@@ -80,7 +80,7 @@ __global__ void move_gpu (particle_t * particles, int n, double size)
 
 __global__ void countParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row){
     int threadId = threadIdx.x + blockIdx.x * blockDim.x;
-    int offset = gridDim.x * gridDim.x;
+    int offset = gridDim.x * blockDim.x,;
     printf("ID %d\n",threadId);
     for(int i = threadId; i < n; i+=offset){
       int x = floor(d_particles[i].x / binSize);
