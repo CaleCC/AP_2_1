@@ -108,6 +108,10 @@ __global__ void move_gpu (particle_t * particles,
           p->vy = -(p->vy);
       }
       particles[return_counter[0]] = *p;
+      if(return_counter[0] == 0){
+        printf("particles0 %d x %f  y %f\n",p->x, p->y );
+      }
+
       atomicAdd(return_counter,1);
     }
   }
