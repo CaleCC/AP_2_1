@@ -70,7 +70,8 @@ __global__ void move_gpu (particle_t * particles,
                           int* counter,
                           int bins_row,
                           particle_t *bin_seperate_p,
-                          int* return_counter)
+                          int* return_counter,
+                          int off_set)
 {
 
   // Get thread (particle) ID
@@ -81,7 +82,7 @@ __global__ void move_gpu (particle_t * particles,
     for(int j = 0; j < counter[i];j++){
 
 
-      particle_t * p = &particles[i*bins_row+j];
+      particle_t * p = &particles[i*off_set+j];
       //
       //  slightly simplified Velocity Verlet integration
       //  conserves energy better than explicit Euler method
@@ -105,6 +106,9 @@ __global__ void move_gpu (particle_t * particles,
           p->vy = -(p->vy);
       }
       particles[return_counter[0]] = *p;
+      if(return_counter[0] == 0){
+        printf("Particle x %f  y %f\n",particles[0].x,particles[0].y );
+      }
       atomicAdd(return_counter,1);
     }
   }
@@ -113,9 +117,9 @@ __global__ void move_gpu (particle_t * particles,
 
 __global__ void countParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row){
     int threadId = threadIdx.x + blockIdx.x * blockDim.x;
-    int offset = gridDim.x * blockDim.x;
+    int step = gridDim.x * blockDim.x;
     //printf("ID %d\n",threadId);
-    for(int i = threadId; i < n; i+=offset){
+    for(int i = threadId; i < n; i+=step){
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
       //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
@@ -125,9 +129,9 @@ __global__ void countParticles(particle_t *d_particles,int n,int* counter, doubl
 
 __global__ void putParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row, particle_t *bin_seperate_p){
     int threadId = threadIdx.x + blockIdx.x * blockDim.x;
-    int offset = gridDim.x * blockDim.x;
+    int step = gridDim.x * blockDim.x;
     //printf("ID %d\n",threadId);
-    for(int i = threadId; i < n; i+=offset){
+    for(int i = threadId; i < n; i+=step){
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
       int loc = x+y*bins_row;
@@ -235,7 +239,7 @@ int main( int argc, char **argv )
         //
         //  move particles
         //
-	       move_gpu <<< blks, NUM_THREADS >>> (d_particles, n, size,counter, bins_row, bin_seperate_p,return_counter);
+	       move_gpu <<< blks, NUM_THREADS >>> (d_particles, n, size,counter, bins_row, bin_seperate_p,return_counter,off_set);
 
         //
         //  save if necessary
