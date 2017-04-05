@@ -81,8 +81,8 @@ __global__ void move_gpu (particle_t * particles,
   for(int i = tid; i < bins_row*bins_row; i+=step){
     for(int j = 0; j < counter[i];j++){
 
-      if(i*off_set+j == 0){
-        printf("particles x %f  y %f\n",bin_seperate_p[i*off_set+j].x, bin_seperate_p[i*off_set+j].y );
+      if(i*off_set == 0){
+        printf("particles %d x %f  y %f\n",j,bin_seperate_p[i*off_set+j].x, bin_seperate_p[i*off_set+j].y );
       }
       particle_t * p = &bin_seperate_p[i*off_set+j];
       //
