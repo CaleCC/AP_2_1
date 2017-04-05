@@ -77,7 +77,7 @@ __global__ void move_gpu (particle_t * particles,
   // Get thread (particle) ID
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   int step = blockDim.x*gridDim.x;
-  if(tid >= bins_row*bins_row) return;
+  //if(tid >= bins_row*bins_row) return;
   for(int i = tid; i < bins_row*bins_row; i+=step){
     for(int j = 0; j < counter[i];j++){
 
