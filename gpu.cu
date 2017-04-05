@@ -80,9 +80,11 @@ __global__ void move_gpu (particle_t * particles,
   if(tid >= bins_row*bins_row) return;
   for(int i = tid; i < bins_row*bins_row; i+=step){
     for(int j = 0; j < counter[i];j++){
+      if(i*off_set == 0){
+        printf("particles x %f  y %f\n",bin_seperate_p[i*off_set+j].y.x, bin_seperate_p[i*off_set+j].y );
+      }
 
-
-      particle_t * p = &particles[i*off_set+j];
+      particle_t * p = &bin_seperate_p[i*off_set+j];
       //
       //  slightly simplified Velocity Verlet integration
       //  conserves energy better than explicit Euler method
@@ -106,9 +108,6 @@ __global__ void move_gpu (particle_t * particles,
           p->vy = -(p->vy);
       }
       particles[return_counter[0]] = *p;
-      if(return_counter[0] == 0){
-        printf("Particle x %f  y %f\n",particles[0].x,particles[0].y );
-      }
       atomicAdd(return_counter,1);
     }
   }
