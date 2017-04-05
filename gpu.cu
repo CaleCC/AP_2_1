@@ -212,7 +212,7 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     //printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
-    for( int step = 0; step <  NSTEPS; step++ )
+    for( int step = 0; step <  2; step++ )
     {
         //compute the number of blocks
         int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
