@@ -56,7 +56,7 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
         for(int j = 0; j < counter[i]; j++){//for each particles in bin[i]
           particles[i*off_set+j].ax =particles[i*off_set+j].ay = 0;
           for(int tar = 0; tar < counter[tar_bin];tar++){
-            apply_force_gpu(particles[i+j],particles[tar_bin*off_set+tar]);
+            apply_force_gpu(particles[i*off_set+j],particles[tar_bin*off_set+tar]);
           }
         }
       }
@@ -131,9 +131,6 @@ __global__ void putParticles(particle_t *d_particles,int n,int* counter, double 
       //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
       bin_seperate_p[loc+counter[loc]] = d_particles[i];
       atomicAdd(counter+x + y * bins_row, 1);
-      if(counter[loc]>=5){
-        printf("overflow");
-      }
     }
 }
 
@@ -207,7 +204,7 @@ int main( int argc, char **argv )
     //
     cudaThreadSynchronize();
     double simulation_time = read_timer( );
-    printf("start steps \n");
+    //printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
     for( int step = 0; step <  NSTEPS; step++ )
     {
