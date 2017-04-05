@@ -78,32 +78,35 @@ __global__ void move_gpu (particle_t * particles,
   int step = blockDim.x*gridDim.x;
   if(tid >= bins_row*bins_row) return;
   for(int i = tid; i < bins_row*bins_row; i+=step){
+    for(int j = 0; j < counter[i];j++){
 
-    particle_t * p = &particles[tid*bins_row+i];
-    //
-    //  slightly simplified Velocity Verlet integration
-    //  conserves energy better than explicit Euler method
-    //
-    p->vx += p->ax * dt;
-    p->vy += p->ay * dt;
-    p->x  += p->vx * dt;
-    p->y  += p->vy * dt;
 
-    //
-    //  bounce from walls
-    //
-    while( p->x < 0 || p->x > size )
-    {
-        p->x  = p->x < 0 ? -(p->x) : 2*size-p->x;
-        p->vx = -(p->vx);
+      particle_t * p = &particles[i*bins_row+j];
+      //
+      //  slightly simplified Velocity Verlet integration
+      //  conserves energy better than explicit Euler method
+      //
+      p->vx += p->ax * dt;
+      p->vy += p->ay * dt;
+      p->x  += p->vx * dt;
+      p->y  += p->vy * dt;
+
+      //
+      //  bounce from walls
+      //
+      while( p->x < 0 || p->x > size )
+      {
+          p->x  = p->x < 0 ? -(p->x) : 2*size-p->x;
+          p->vx = -(p->vx);
+      }
+      while( p->y < 0 || p->y > size )
+      {
+          p->y  = p->y < 0 ? -(p->y) : 2*size-p->y;
+          p->vy = -(p->vy);
+      }
+      particles[return_counter[0]] = *p;
+      atomicAdd(return_counter,1);
     }
-    while( p->y < 0 || p->y > size )
-    {
-        p->y  = p->y < 0 ? -(p->y) : 2*size-p->y;
-        p->vy = -(p->vy);
-    }
-    particles[return_counter[0]] = *p;
-    atomicAdd(return_counter,1);
   }
 
 }
