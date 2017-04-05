@@ -81,14 +81,32 @@ __global__ void move_gpu (particle_t * particles, int n, double size)
 __global__ void countParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row){
     int threadId = threadIdx.x + blockIdx.x * blockDim.x;
     int offset = gridDim.x * blockDim.x;
-    printf("ID %d\n",threadId);
+    //printf("ID %d\n",threadId);
     for(int i = threadId; i < n; i+=offset){
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
-      printf("threadIdx.x %d particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
+      //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
       atomicAdd(counter+x + y * bins_row, 1);
     }
 }
+
+__global__ void putParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row, particle_t *bin_seperate_p){
+    int threadId = threadIdx.x + blockIdx.x * blockDim.x;
+    int offset = gridDim.x * blockDim.x;
+    //printf("ID %d\n",threadId);
+    for(int i = threadId; i < n; i+=offset){
+      int x = floor(d_particles[i].x / binSize);
+      int y = floor(d_particles[i].y / binSize);
+      int loc = x+y*bins_row
+      //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
+      bin_seperate_p[loc+counter[loc]] = d_particles[i];
+      atomicAdd(counter+x + y * bins_row, 1);
+      if(counter[loc]>=5){
+        printf("overflow");
+      }
+    }
+}
+
 
 
 
@@ -129,7 +147,7 @@ int main( int argc, char **argv )
     //cudamalloc another shared memory to store the particles seperated by bins
     //
     particle_t * bin_seperate_p;
-    int off_set = 2 * (n / bin_num);//assume the max number of particles in a bin is off_set
+    int off_set = 5;//assume the max number of particles in a bin is off_set
     cudaMalloc((void **) &bin_seperate_p, off_set * n * sizeof(particle_t));
     printf("allocate memory for bin_seperate finished, off_set %d \n", off_set);
     //a counter to keep the number of particles in each bin
@@ -164,15 +182,20 @@ int main( int argc, char **argv )
         //printf("new setp bigins \n");
         //count the number of particles in each bins
         cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
-        countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
-        //printf("count particles finished \n");
-        cudaThreadSynchronize();
+        //countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
+        //
+        //put new particles in the new array
+        //
+        putParticles<<<blks, NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row, bin_seperate_p);
+
+        printf("put new particles finished \n");
+        //cudaThreadSynchronize();
         //
         //  compute forces
         //
 
 	      //int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
-	        compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n);
+	      compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n);
 
         //
         //  move particles
