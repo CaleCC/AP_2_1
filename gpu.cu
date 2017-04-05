@@ -97,7 +97,7 @@ __global__ void putParticles(particle_t *d_particles,int n,int* counter, double 
     for(int i = threadId; i < n; i+=offset){
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
-      int loc = x+y*bins_row
+      int loc = x+y*bins_row;
       //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
       bin_seperate_p[loc+counter[loc]] = d_particles[i];
       atomicAdd(counter+x + y * bins_row, 1);
