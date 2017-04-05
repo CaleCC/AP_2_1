@@ -80,10 +80,10 @@ __global__ void move_gpu (particle_t * particles,
   if(tid >= bins_row*bins_row) return;
   for(int i = tid; i < bins_row*bins_row; i+=step){
     for(int j = 0; j < counter[i];j++){
-      if(i*off_set == 0){
+
+      if(i*off_set+j == 0){
         printf("particles x %f  y %f\n",bin_seperate_p[i*off_set+j].x, bin_seperate_p[i*off_set+j].y );
       }
-
       particle_t * p = &bin_seperate_p[i*off_set+j];
       //
       //  slightly simplified Velocity Verlet integration
@@ -212,7 +212,7 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     //printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
-    for( int step = 0; step <  2; step++ )
+    for( int step = 0; step <  NSTEPS; step++ )
     {
         //compute the number of blocks
         int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
