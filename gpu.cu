@@ -64,7 +64,7 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
   }
 }
 
-__global__ void move_gpu (particle_t * particles,
+/*__global__ void move_gpu (particle_t * particles,
                           int n,
                           double size,
                           int* counter,
@@ -116,6 +116,38 @@ __global__ void move_gpu (particle_t * particles,
     }
   }
 
+}*/
+__global__ void move_gpu (particle_t * particles, int n, double size)
+{
+
+  // Get thread (particle) ID
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  if(tid >= n) return;
+
+  particle_t * p = &particles[tid];
+    //
+    //  slightly simplified Velocity Verlet integration
+    //  conserves energy better than explicit Euler method
+    //
+    p->vx += p->ax * dt;
+    p->vy += p->ay * dt;
+    p->x  += p->vx * dt;
+    p->y  += p->vy * dt;
+
+    //
+    //  bounce from walls
+    //
+    while( p->x < 0 || p->x > size )
+    {
+        p->x  = p->x < 0 ? -(p->x) : 2*size-p->x;
+        p->vx = -(p->vx);
+    }
+    while( p->y < 0 || p->y > size )
+    {
+        p->y  = p->y < 0 ? -(p->y) : 2*size-p->y;
+        p->vy = -(p->vy);
+    }
+
 }
 
 __global__ void countParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row){
@@ -142,6 +174,16 @@ __global__ void putParticles(particle_t *d_particles,int n,int* counter, double 
       bin_seperate_p[loc+counter[loc]] = d_particles[i];
       atomicAdd(counter+x + y * bins_row, 1);
     }
+}
+__global__ void copy_back(particle_t* bin_seperate_p,particle_t* d_particles,int n, int bins_row,int* counter, int off_set, int* return_counter){
+  int threadId = threadIdx.x + blockIdx.x * blockDim.x;
+  int step = gridDim.x * blockDim.x;
+  for(int i=threadId;i < bins_row*bins_row;i+=step){
+    for(int j = 0; j< counter[threadId];j++){
+      d_particles[return_counter[0]] = bin_seperate_p[i*off_set+j];
+      atomicAdd(return_counter,1);
+    }
+  }
 }
 
 
@@ -238,12 +280,12 @@ int main( int argc, char **argv )
 
 	      //int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
 	      compute_forces_gpu <<< blks, NUM_THREADS >>> (bin_seperate_p, n, bins_row, counter, off_set);
-
+        copy_back<<<blks, NUM_THREADS>>>(bin_seperate_p,d_particles,n,bins_row,counter,off_set,return_counter);
         //
         //  move particles
         //
-	       move_gpu <<< blks, NUM_THREADS >>> (d_particles, n, size,counter, bins_row, bin_seperate_p,return_counter,off_set);
-
+	      // move_gpu <<< blks, NUM_THREADS >>> (d_particles, n, size,counter, bins_row, bin_seperate_p,return_counter,off_set);
+        move_gpu <<< blks, NUM_THREADS >>> (d_particles, n, size);
         //
         //  save if necessary
         //
