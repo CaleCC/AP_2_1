@@ -223,7 +223,7 @@ int main( int argc, char **argv )
         //
         putParticles<<<blks, NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row, bin_seperate_p);
 
-        printf("put new particles finished \n");
+        //printf("put new particles finished \n");
         //cudaThreadSynchronize();
         //
         //  compute forces
@@ -248,14 +248,14 @@ int main( int argc, char **argv )
     }
     cudaThreadSynchronize();
     simulation_time = read_timer( ) - simulation_time;
-    int *count_h = (int*)malloc(bin_num*sizeof(int));
-    cudaMemcpy(count_h,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
-    int sum = 0;
-    for(int i = 0; i <=bin_num;i++){
-      printf("bin[%d] = %d\n" ,i, count_h[i]);
-      sum += count_h[i];
-    }
-    printf("sum of all particles is %d\n" ,sum);
+    // int *count_h = (int*)malloc(bin_num*sizeof(int));
+    // cudaMemcpy(count_h,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
+    //int sum = 0;
+    // for(int i = 0; i <=bin_num;i++){
+    //   printf("bin[%d] = %d\n" ,i, count_h[i]);
+    //   sum += count_h[i];
+    // }
+    //printf("sum of all particles is %d\n" ,sum);
 
     printf( "CPU-GPU copy time = %g seconds\n", copy_time);
     printf( "n = %d, simulation time = %g seconds\n", n, simulation_time );
