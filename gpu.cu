@@ -55,7 +55,7 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
       for(int xx=x_start;xx<=x_end;xx++){
         for(int yy=y_start;yy<=y_end;yy++){
           int loc = (x+xx)+(y+yy)*bins_row;
-          printf("loc: %d\d",loc);
+          printf("loc: %d\n",loc);
           for(int m = counter[loc-1];m<counter[loc];m++){
             printf("m %d\n",m);
             apply_force_gpu(p,particles[m]);
