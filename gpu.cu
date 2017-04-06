@@ -4,7 +4,7 @@
 #include <math.h>
 #include <cuda.h>
 #include "common.h"
-
+#include<vector>
 #define NUM_THREADS 256
 
 //extern double size;
