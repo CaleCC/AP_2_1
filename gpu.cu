@@ -266,7 +266,7 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     //printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
-    for( int step = 0; step <  2; step++ )
+    for( int step = 0; step <  1; step++ )
     {
         //compute the number of blocks
         int blks =min(1024, (n + NUM_THREADS - 1) / NUM_THREADS);
@@ -278,7 +278,9 @@ int main( int argc, char **argv )
         //count number of particles in each bin
         //
         countParticles<<<blks, NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row);
-
+        for(int i = 0;i<bin_num;i++){
+          printf("bin %d number %d\n",i,h_counter[i]);
+        }
 
         //cuda calculate the prefix sum
         cudaMemcpy(h_counter,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
