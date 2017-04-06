@@ -5,6 +5,7 @@
 #include <cuda.h>
 #include "common.h"
 #include <vector>
+#include <algorithm>
 #define NUM_THREADS 256
 
 //extern double size;
@@ -238,7 +239,7 @@ int main( int argc, char **argv )
     int* counter;
     cudaMalloc((void **) &counter, (bin_num+1)* sizeof(int));
 
-    cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
+    cudaMemset(counter, 0, (bin_num+1) * sizeof(int));//set counter to zero
     counter=counter+1;
     int* h_counter = (int*)malloc(bin_num*sizeof(int));
     /*int* return_counter;
@@ -268,10 +269,10 @@ int main( int argc, char **argv )
     for( int step = 0; step <  NSTEPS; step++ )
     {
         //compute the number of blocks
-        int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
+        int blks =min(1024, (n + NUM_THREADS - 1) / NUM_THREADS);
         //printf("new setp bigins \n");
         //count the number of particles in each bins
-        cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
+        cudaMemset(counter, 0, (bin_num) * sizeof(int));//set counter to zero
         //countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
         //
         //count number of particles in each bin
@@ -282,7 +283,7 @@ int main( int argc, char **argv )
         //cuda calculate the prefix sum
         cudaMemcpy(h_counter,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
         for(int i=1; i<bin_num;i++){
-          h_counter[i]=h_counter[i]+h_counter[i-1];
+          h_counter[i]+=h_counter[i-1];
         }
         cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
         putParticles<<<blks,NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row,bin_seperate_p);
