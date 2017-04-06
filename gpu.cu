@@ -278,12 +278,13 @@ int main( int argc, char **argv )
         //count number of particles in each bin
         //
         countParticles<<<blks, NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row);
-        for(int i = 0;i<bin_num;i++){
-          printf("bin %d number %d\n",i,h_counter[i]);
-        }
+
 
         //cuda calculate the prefix sum
         cudaMemcpy(h_counter,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
+        for(int i = 0;i<bin_num;i++){
+          printf("bin %d number %d\n",i,h_counter[i]);
+        }
         for(int i=1; i<bin_num;i++){
           h_counter[i]+=h_counter[i-1];
         }
