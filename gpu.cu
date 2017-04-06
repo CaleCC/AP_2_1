@@ -125,9 +125,9 @@ __global__ void move_gpu (particle_t * particles, int n, double size)
 
   // Get thread (particle) ID
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
-  if(tid >= n) return;
-
-  particle_t * p = &particles[tid];
+  int stride = gridDim.x*blockDim.x;
+  for(int i = tid;i<n;i+=stride){
+    particle_t * p = &particles[tid];
     //
     //  slightly simplified Velocity Verlet integration
     //  conserves energy better than explicit Euler method
@@ -150,6 +150,7 @@ __global__ void move_gpu (particle_t * particles, int n, double size)
         p->y  = p->y < 0 ? -(p->y) : 2*size-p->y;
         p->vy = -(p->vy);
     }
+  }
 
 }
 
@@ -324,6 +325,7 @@ int main( int argc, char **argv )
 
     free( particles );
     cudaFree(d_particles);
+    cudaFree(bin_seperate_p);
     if( fsave )
         fclose( fsave );
 
