@@ -55,7 +55,9 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
       for(int xx=x_start;xx<=x_end;xx++){
         for(int yy=y_start;yy<=y_end;yy++){
           int loc = (x+xx)+(y+yy)*bins_row;
+          printf("loc: %d\d",loc);
           for(int m = counter[loc-1];m<counter[loc];m++){
+            printf("m %d\n",m);
             apply_force_gpu(p,particles[m]);
           }
         }
@@ -173,7 +175,7 @@ __global__ void putParticles(particle_t *d_particles,int n,int* counter, double 
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
       int loc = x+y*bins_row;
-      //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
+      printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
       //bin_seperate_p[loc+counter[loc]] = d_particles[i];
       int particle_loc = atomicSub(counter+loc, 1);
       bin_seperate_p[particle_loc - 1] = d_particles[i];
@@ -266,7 +268,7 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     //printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
-    for( int step = 0; step <  10; step++ )
+    for( int step = 0; step <  2; step++ )
     {
         //compute the number of blocks
         int blks =min(1024, (n + NUM_THREADS - 1) / NUM_THREADS);
