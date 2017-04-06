@@ -37,7 +37,7 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
   // Get thread (particle) ID
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   int step = blockDim.x * gridDim.x;
-  
+
   for(int i = tid; i < n; i+=step){
       particle_t p = particles[i];//use local variables here maybe faster
       p.ax = p.ay = 0;
@@ -53,7 +53,7 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
       if(y == bins_row - 1) y_end = 0;
       for(int xx=x_start;xx<x_end;xx++){
         for(int yy=y_start;yy<y_end;yy++){
-          int loc = x+y*bins_row;
+          int loc = (x+xx)+(y+yy)*bins_row;
           for(int m = counter[loc-1];m<counter[loc];m++){
             apply_force_gpu(p,particles[m]);
           }
