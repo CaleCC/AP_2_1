@@ -61,8 +61,8 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
           }
         }
       }
-      particles[i] = p;//copy back to shared memory
-
+      particles[i].ax = p.ax;//copy back to shared memory
+      particles[i].ay = p.ay;
 
   }
 }
