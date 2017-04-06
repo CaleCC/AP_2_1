@@ -6,7 +6,7 @@
 #include "common.h"
 #include <vector>
 #include <algorithm>
-#define NUM_THREADS 256
+#define NUM_THREADS 128
 
 //extern double size;
 //
