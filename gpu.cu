@@ -224,7 +224,7 @@ int main( int argc, char **argv )
 
     double size = sqrt( density * n );
 
-    bins_row = ceil(size / cutoff);
+    bins_row = ceil(size / binSize);
     printf("size = %f binSize = %f bins_row = %d\n",size,binSize,bins_row);
 
     int bin_num = bins_row * bins_row;
