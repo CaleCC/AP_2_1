@@ -4,7 +4,7 @@
 #include <math.h>
 #include <cuda.h>
 #include "common.h"
-#include<vector>
+#include <vector>
 #define NUM_THREADS 256
 
 //extern double size;
@@ -37,7 +37,7 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
   // Get thread (particle) ID
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   int step = blockDim.x * gridDim.x;
-  if(tid >= bins_row*bins_row) return;
+  
   for(int i = tid; i < n; i+=step){
       particle_t p = particles[i];//use local variables here maybe faster
       p.ax = p.ay = 0;
