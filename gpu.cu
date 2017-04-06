@@ -7,7 +7,8 @@
 #include <vector>
 
 #define NUM_THREADS 256
-
+int bins_row;
+double binSize;
 //extern double size;
 //
 //  benchmarking program
@@ -33,34 +34,36 @@ __device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor)
 
 }
 
-__global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, int* counter, int off_set)
+__global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, int* counter,double binSize)
 {
   // Get thread (particle) ID
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   int step = blockDim.x * gridDim.x;
   if(tid >= bins_row*bins_row) return;
-  for(int i = tid; i < bins_row*bins_row; i+=step){
-    int x_start = -1;
-    int x_end = 1;
-    int y_start = -1;
-    int y_end = 1;
-    //calclate the neighbours of bin i
-    if(i<bins_row) y_start = 0;
-    if(i%bins_row == 0) x_start = 0;
-    if((i+1)%bins_row == 0) x_end = 0;
-    if((i+bins_row)/bins_row >= bins_row) y_end = 0;
-    //for each neighbour
-    for(int p = x_start;p<x_end;p++){
-      for(int q = y_start;q<y_end;q++){
-        int tar_bin = i+p+q*bins_row;//the loc of neighbour bin
-        for(int j = 0; j < counter[i]; j++){//for each particles in bin[i]
-          particles[i*off_set+j].ax =particles[i*off_set+j].ay = 0;
-          for(int tar = 0; tar < counter[tar_bin];tar++){
-            apply_force_gpu(particles[i*off_set+j],particles[tar_bin*off_set+tar]);
+  for(int i = tid; i < n; i+=step){
+      particle_t p = particles[i];//use local variables here maybe faster
+      p.ax = p.ay = 0;
+      int x = floor(p.x/binSize);
+      int y = floor(p.y/binSize);
+      int x_start = -1;
+      int x_end = 1;
+      int y_start = -1;
+      int y_end = 1;
+      if(x == 0) x_start = 0;
+      if(x == bins_row-1) x_end = 0;
+      if(y == 0) y_start = 0;;
+      if(y == bins_row - 1) y_end = 0;
+      for(int xx=x_start;xx<x_end;xx++){
+        for(int yy=y_start;yy<y_end;yy++){
+          int loc = x+y*bins_row;
+          for(int m = counter[loc-1];m<counter[loc];m++){
+            apply_force_gpu(p,particles[m]);
           }
         }
       }
-    }
+      particles[i] = p;//copy back to shared memory
+
+
   }
 }
 
@@ -171,8 +174,9 @@ __global__ void putParticles(particle_t *d_particles,int n,int* counter, double 
       int y = floor(d_particles[i].y / binSize);
       int loc = x+y*bins_row;
       //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
-      bin_seperate_p[loc+counter[loc]] = d_particles[i];
-      atomicAdd(counter+x + y * bins_row, 1);
+      //bin_seperate_p[loc+counter[loc]] = d_particles[i];
+      int particle_loc = atomicSub(counter+loc, 1);
+      bin_seperate_p[particle_loc - 1] = d_particles[i];
     }
 }
 __global__ void copy_back(particle_t* bin_seperate_p,particle_t* d_particles,int n, int bins_row,int* counter, int off_set, int* return_counter){
@@ -215,28 +219,28 @@ int main( int argc, char **argv )
     cudaMalloc((void **) &d_particles, n * sizeof(particle_t));
     //bins size and number of bins
     //
-    double binSize = cutoff;
+    binSize = cutoff;//maybe larger size?
 
     double size = sqrt( density * n );
 
-    int bins_row = ceil(size / cutoff);
+    bins_row = ceil(size / cutoff)+1;
     printf("size = %f binSize = %f bins_row = %d\n",size,binSize,bins_row);
 
     double bin_num = bins_row * bins_row;
     //cudamalloc another shared memory to store the particles seperated by bins
     //
     particle_t * bin_seperate_p;
-    int off_set = 5;//assume the max number of particles in a bin is off_set
-    cudaMalloc((void **) &bin_seperate_p, off_set * n * sizeof(particle_t));
-    printf("allocate memory for bin_seperate finished, off_set %d \n", off_set);
+    //int off_set = 5;//assume the max number of particles in a bin is off_set
+    cudaMalloc((void **) &bin_seperate_p,  n * sizeof(particle_t));
+
     //a counter to keep the number of particles in each bin
     int* counter;
     cudaMalloc((void **) &counter, bin_num * sizeof(int));
     cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
-
-    int* return_counter;
+    int* h_counter = (int*)malloc(bin_num*sizeof(int));
+    /*int* return_counter;
     cudaMalloc((void**) &return_counter, sizeof(int));
-    cudaMemset(return_counter,0,sizeof(int));
+    cudaMemset(return_counter,0,sizeof(int));*/
 
     set_size( n );
 
@@ -265,22 +269,31 @@ int main( int argc, char **argv )
         //printf("new setp bigins \n");
         //count the number of particles in each bins
         cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
-        cudaMemset(return_counter,0,sizeof(int));//set return_counter to zero
         //countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
         //
-        //put new particles in the new array
+        //count number of particles in each bin
         //
-        putParticles<<<blks, NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row, bin_seperate_p);
+        countParticles<<<blks, NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row);
+
+
+        //cuda calculate the prefix sum
+        cudaMemcpy(h_counter,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
+        for(int i=1; i<bin_num;i++){
+          h_counter[i]=h_counter[i]+h_counter[i-1];
+        }
+        cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
+        putParticles<<<blks,NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row,bin_seperate_p);
 
         //printf("put new particles finished \n");
         //cudaThreadSynchronize();
         //
         //  compute forces
         //
-
+        //sent prefix sum value to counter again for force computation
 	      //int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
-	      compute_forces_gpu <<< blks, NUM_THREADS >>> (bin_seperate_p, n, bins_row, counter, off_set);
-        copy_back<<<blks, NUM_THREADS>>>(bin_seperate_p,d_particles,n,bins_row,counter,off_set,return_counter);
+        std::swap(d_particles,bin_seperate_p);
+	      compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n, bins_row, counter,binSize);
+        //copy_back<<<blks, NUM_THREADS>>>(bin_seperate_p,d_particles,n,bins_row,counter,off_set,return_counter);
         //
         //  move particles
         //
