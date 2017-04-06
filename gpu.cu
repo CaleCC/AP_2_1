@@ -266,7 +266,7 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     //printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
-    for( int step = 0; step <  1; step++ )
+    for( int step = 0; step <  10; step++ )
     {
         //compute the number of blocks
         int blks =min(1024, (n + NUM_THREADS - 1) / NUM_THREADS);
@@ -289,9 +289,9 @@ int main( int argc, char **argv )
           h_counter[i]+=h_counter[i-1];
         }
         cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
-        for(int i = 0;i<bin_num;i++){
-          printf("bin %d number %d\n",i,h_counter[i]);
-        }
+        // for(int i = 0;i<bin_num;i++){
+        //   printf("bin %d number %d\n",i,h_counter[i]);
+        // }
         putParticles<<<blks,NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row,bin_seperate_p);
 
         //printf("put new particles finished \n");
