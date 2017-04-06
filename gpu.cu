@@ -176,7 +176,7 @@ __global__ void putParticles(particle_t *d_particles,int n,int* counter, double 
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
       int loc = x+y*bins_row;
-      printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
+      //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
       //bin_seperate_p[loc+counter[loc]] = d_particles[i];
       int particle_loc = atomicSub(counter+loc, 1);
       bin_seperate_p[particle_loc - 1] = d_particles[i];
