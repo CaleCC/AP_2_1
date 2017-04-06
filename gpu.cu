@@ -272,7 +272,7 @@ int main( int argc, char **argv )
     for( int step = 0; step <  NSTEPS; step++ )
     {
         //compute the number of blocks
-        int blks =min(1024, (n + NUM_THREADS - 1) / NUM_THREADS);
+        int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
         //printf("new setp bigins \n");
         //count the number of particles in each bins
         cudaMemset(counter, 0, (bin_num) * sizeof(int));//set counter to zero
@@ -303,7 +303,6 @@ int main( int argc, char **argv )
         //  compute forces
         //
         //sent prefix sum value to counter again for force computation
-	      //int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
         cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
         std::swap(d_particles,bin_seperate_p);
 	      compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n, bins_row, counter,binSize);
