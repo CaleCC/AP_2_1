@@ -4,11 +4,9 @@
 #include <math.h>
 #include <cuda.h>
 #include "common.h"
-#include <vector>
 
 #define NUM_THREADS 256
-int bins_row;
-double binSize;
+
 //extern double size;
 //
 //  benchmarking program
@@ -220,14 +218,16 @@ int main( int argc, char **argv )
     cudaMalloc((void **) &d_particles, n * sizeof(particle_t));
     //bins size and number of bins
     //
-    binSize = cutoff;//maybe larger size?
+    int bins_row;
+    double binSize;
+    binSize = cutoff*5;//maybe larger size?
 
     double size = sqrt( density * n );
 
-    bins_row = ceil(size / cutoff)+1;
+    bins_row = ceil(size / cutoff);
     printf("size = %f binSize = %f bins_row = %d\n",size,binSize,bins_row);
 
-    double bin_num = bins_row * bins_row;
+    int bin_num = bins_row * bins_row;
     //cudamalloc another shared memory to store the particles seperated by bins
     //
     particle_t * bin_seperate_p;
@@ -236,8 +236,10 @@ int main( int argc, char **argv )
 
     //a counter to keep the number of particles in each bin
     int* counter;
-    cudaMalloc((void **) &counter, bin_num * sizeof(int));
+    cudaMalloc((void **) &counter, (bin_num+1)* sizeof(int));
+
     cudaMemset(counter, 0, bin_num * sizeof(int));//set counter to zero
+    counter=counter+1;
     int* h_counter = (int*)malloc(bin_num*sizeof(int));
     /*int* return_counter;
     cudaMalloc((void**) &return_counter, sizeof(int));
