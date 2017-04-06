@@ -280,7 +280,7 @@ int main( int argc, char **argv )
         //
         //count number of particles in each bin
         //
-        countParticles<<<blks, NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row);
+        countParticles<<<1, 1>>>(d_particles,n,counter,binSize, bins_row);
 
 
         //cuda calculate the prefix sum
