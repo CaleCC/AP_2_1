@@ -52,13 +52,13 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
       if(x == bins_row-1) x_end = 0;
       if(y == 0) y_start = 0;;
       if(y == bins_row - 1) y_end = 0;
-      printf("x: %d  y %d\n",x,y);
+      //printf("x: %d  y %d\n",x,y);
       for(int xx=x_start;xx<=x_end;xx++){
         for(int yy=y_start;yy<=y_end;yy++){
           int loc = (x+xx)+(y+yy)*bins_row;
-          printf("loc: %d\n",loc);
+          //printf("loc: %d\n",loc);
           for(int m = counter[loc-1];m<counter[loc];m++){
-            printf("m %d\n",m);
+            //printf("m %d\n",m);
             apply_force_gpu(p,particles[m]);
           }
         }
@@ -269,7 +269,7 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     //printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
-    for( int step = 0; step <  2; step++ )
+    for( int step = 0; step <  NSTEPS; step++ )
     {
         //compute the number of blocks
         int blks =min(1024, (n + NUM_THREADS - 1) / NUM_THREADS);
@@ -285,9 +285,9 @@ int main( int argc, char **argv )
 
         //cuda calculate the prefix sum
         cudaMemcpy(h_counter,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
-        for(int i = 0;i<bin_num;i++){
-          printf("bin %d number %d\n",i,h_counter[i]);
-        }
+        // for(int i = 0;i<bin_num;i++){
+        //   printf("bin %d number %d\n",i,h_counter[i]);
+        // }
         for(int i=1; i<bin_num;i++){
           h_counter[i]+=h_counter[i-1];
         }
@@ -304,13 +304,13 @@ int main( int argc, char **argv )
         //
         //sent prefix sum value to counter again for force computation
 	      //int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
+        cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
         std::swap(d_particles,bin_seperate_p);
 	      compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n, bins_row, counter,binSize);
         //copy_back<<<blks, NUM_THREADS>>>(bin_seperate_p,d_particles,n,bins_row,counter,off_set,return_counter);
         //
         //  move particles
         //
-	      // move_gpu <<< blks, NUM_THREADS >>> (d_particles, n, size,counter, bins_row, bin_seperate_p,return_counter,off_set);
         move_gpu <<< blks, NUM_THREADS >>> (d_particles, n, size);
         //
         //  save if necessary
