@@ -278,12 +278,13 @@ int main( int argc, char **argv )
     //a counter to keep the number of particles in each bin
     int* counter;
     int* counter2;
-    cudaMalloc((void **) &counter, (bin_num+1)* sizeof(int));
+    int powerf = powerFloor(bin_num+1);
+    int powerc = powerf * 2;
+    cudaMalloc((void **) &counter, (powerc)* sizeof(int));
     cudaMalloc((void **) &counter2, (bin_num+1)* sizeof(int));
 
-    cudaMemset(counter, 0, (bin_num+2) * sizeof(int));//set counter to zero
-    cudaMemset(counter2, 0, (bin_num+2) * sizeof(int));//set counter to zero
-    counter+=1;
+    cudaMemset(counter, 0, powerc * sizeof(int));//set counter to zero
+    cudaMemset(counter2, 0, (bin_num+1) * sizeof(int));//set counter to zero
     int* h_counter = (int*)malloc(bin_num*sizeof(int));
     /*int* return_counter;
     cudaMalloc((void**) &return_counter, sizeof(int));
@@ -315,7 +316,7 @@ int main( int argc, char **argv )
         int blks =(n + NUM_THREADS - 1) / NUM_THREADS;
         //printf("new setp bigins \n");
         //count the number of particles in each bins
-        cudaMemset(counter, 0, (bin_num+1) * sizeof(int));//set counter to zero
+        cudaMemset(counter, 0, powerc * sizeof(int));//set counter to zero
         cudaMemset(counter2, 0, (bin_num+1) * sizeof(int));//set counter to zero
         //countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
         //
@@ -325,10 +326,9 @@ int main( int argc, char **argv )
 
 
         //cuda calculate the prefix sum
-        cudaMemcpy(h_counter,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
+        //cudaMemcpy(h_counter,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
         //////////////////////////////////////////////////////////////////////////
-        int powerf = powerFloor(bin_num+1);
-        int powerc = powerf * 2;
+
         // Since in-place algorithm is used, we did not allocate device_input
         // launch_scan(roundedLen, device_output, 256);
         // Up Tree
