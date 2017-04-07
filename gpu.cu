@@ -353,10 +353,10 @@ int main( int argc, char **argv )
         // Wait for all instances to finished
         cudaThreadSynchronize();
         cudaMemcpy(counter2, particles, bin_num+1, cudaMemcpyDeviceToDevice);
-        // cudaMemcpy(h_counter,counter+1,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
-        // for(int i = 0;i<bin_num;i++){
-        //   printf("bin %d number %d\n",i,h_counter[i]);
-        // }
+        cudaMemcpy(h_counter,counter2+1,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
+        for(int i = 0;i<bin_num;i++){
+          printf("bin %d number %d\n",i,h_counter[i]);
+        }
 
 
         ////////////////////////////////////////////////////////////////////////////
