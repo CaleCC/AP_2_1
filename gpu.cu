@@ -377,7 +377,7 @@ int main( int argc, char **argv )
         //sent prefix sum value to counter again for force computation
         //cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
         std::swap(d_particles,bin_seperate_p);
-	      compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n, bins_row, counter+1,binSize);
+	      compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n, bins_row, counter2+1,binSize);
         //copy_back<<<blks, NUM_THREADS>>>(bin_seperate_p,d_particles,n,bins_row,counter,off_set,return_counter);
         //
         //  move particles
