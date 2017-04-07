@@ -416,6 +416,8 @@ int main( int argc, char **argv )
     free( particles );
     cudaFree(d_particles);
     cudaFree(bin_seperate_p);
+    cudaFree(counter);
+    cudaFree(counter2);
     if( fsave )
         fclose( fsave );
 
