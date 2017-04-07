@@ -309,13 +309,14 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     //printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
-    for( int step = 0; step <  NSTEPS; step++ )
+    for( int step = 0; step <  10; step++ )
     {
         //compute the number of blocks
         int blks =(n + NUM_THREADS - 1) / NUM_THREADS;
         //printf("new setp bigins \n");
         //count the number of particles in each bins
-        cudaMemset(counter, 0, (bin_num) * sizeof(int));//set counter to zero
+        cudaMemset(counter, 0, (bin_num+1) * sizeof(int));//set counter to zero
+        cudaMemset(counter2, 0, (bin_num+1) * sizeof(int));//set counter to zero
         //countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
         //
         //count number of particles in each bin
@@ -352,8 +353,10 @@ int main( int argc, char **argv )
         // Wait for all instances to finished
         cudaThreadSynchronize();
         cudaMemcpy(counter2, particles, bin_num+1, cudaMemcpyDeviceToDevice);
-
-
+        cudaMemcpy(h_counter,counter+1,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
+        for(int i = 0;i<bin_num;i++){
+          printf("bin %d number %d\n",i,h_counter[i]);
+        }
 
 
         ////////////////////////////////////////////////////////////////////////////
