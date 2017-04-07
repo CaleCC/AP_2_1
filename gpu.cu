@@ -8,7 +8,6 @@
 #include <algorithm>
 #define NUM_THREADS 128
 
-//extern double size;
 //
 //  benchmarking program
 //
@@ -44,6 +43,8 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
       p.ax = p.ay = 0;
       int x = floor(p.x/binSize);
       int y = floor(p.y/binSize);
+
+      //determine the neighbours
       int x_start = -1;
       int x_end = 1;
       int y_start = -1;
@@ -52,7 +53,7 @@ __global__ void compute_forces_gpu(particle_t * particles, int n, int bins_row, 
       if(x == bins_row-1) x_end = 0;
       if(y == 0) y_start = 0;;
       if(y == bins_row - 1) y_end = 0;
-      //printf("x: %d  y %d\n",x,y);
+      //calculate force
       for(int xx=x_start;xx<=x_end;xx++){
         for(int yy=y_start;yy<=y_end;yy++){
           int loc = (x+xx)+(y+yy)*bins_row;
@@ -155,30 +156,27 @@ __global__ void move_gpu (particle_t * particles, int n, double size)
   }
 
 }
-
+//count the particles in each bin
 __global__ void countParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row){
     int threadId = threadIdx.x + blockIdx.x * blockDim.x;
     int step = gridDim.x * blockDim.x;
-    //printf("ID %d\n",threadId);
     for(int i = threadId; i < n; i+=step){
+      //cal which bin the particle belongs to
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
-      //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
       atomicAdd(counter+x + y * bins_row, 1);
     }
 }
-
+//use new array to keep the reorganized particles
 __global__ void putParticles(particle_t *d_particles,int n,int* counter, double binSize, int bins_row, particle_t *bin_seperate_p){
     int threadId = threadIdx.x + blockIdx.x * blockDim.x;
     int step = gridDim.x * blockDim.x;
-    //printf("ID %d\n",threadId);
     for(int i = threadId; i < n; i+=step){
       int x = floor(d_particles[i].x / binSize);
       int y = floor(d_particles[i].y / binSize);
       int loc = x+y*bins_row;
-      //printf("particle %d X=%.6f Y=%.6f x=%d  y=%d\n",threadIdx.x,i,d_particles[i].x,d_particles[i].y,x,y);
-      //bin_seperate_p[loc+counter[loc]] = d_particles[i];
       int particle_loc = atomicSub(counter+loc, 1);
+      //the correct location of the particle is particle_loc
       bin_seperate_p[particle_loc - 1] = d_particles[i];
     }
 }
@@ -192,6 +190,8 @@ __global__ void copy_back(particle_t* bin_seperate_p,particle_t* d_particles,int
     }
   }
 }
+
+//used to calculate the prefix sum
 __global__ void upTree(int *device_output, int len, int interval)
 {
     int index = ((blockIdx.x * blockDim.x + threadIdx.x) + 1) * interval - 1;
@@ -277,6 +277,7 @@ int main( int argc, char **argv )
 
     //a counter to keep the number of particles in each bin
     int* counter;
+    //use counter to keep a copy of the prefix sum
     int* counter2;
     int powerf = powerFloor(bin_num+1);
     int powerc = powerf * 2;
@@ -286,9 +287,6 @@ int main( int argc, char **argv )
     cudaMemset(counter, 0, powerc * sizeof(int));//set counter to zero
     cudaMemset(counter2, 0, (bin_num+1) * sizeof(int));//set counter to zero
     int* h_counter = (int*)malloc(bin_num*sizeof(int));
-    /*int* return_counter;
-    cudaMalloc((void**) &return_counter, sizeof(int));
-    cudaMemset(return_counter,0,sizeof(int));*/
 
     set_size( n );
 
@@ -318,7 +316,7 @@ int main( int argc, char **argv )
         //count the number of particles in each bins
         cudaMemset(counter, 0, powerc * sizeof(int));//set counter to zero
         cudaMemset(counter2, 0, (bin_num+1) * sizeof(int));//set counter to zero
-        //countParticles<<<blks, NUM_THREADS>>> (d_particles, n, counter, binSize, bins_row);
+
         //
         //count number of particles in each bin
         //
@@ -329,8 +327,7 @@ int main( int argc, char **argv )
         //cudaMemcpy(h_counter,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
         //////////////////////////////////////////////////////////////////////////
 
-        // Since in-place algorithm is used, we did not allocate device_input
-        // launch_scan(roundedLen, device_output, 256);
+        // in-place algorithm is used, we did not allocate device_input
         // Up Tree
 
         for(int interval = 2; interval <= powerf; interval *= 2){
@@ -341,16 +338,15 @@ int main( int argc, char **argv )
 
 
 
-
+        //down tree
         for(int interval = powerf * 2; interval >= 1; interval /= 2){
             int numBlocks = (powerc / interval + NUM_THREADS - 1) / NUM_THREADS;
             downTree<<<numBlocks, NUM_THREADS>>>(counter, powerc, interval);
         }
-        //counter = counter+1;
 
 
 
-        // Wait for all instances to finished
+        // Wait for all instances to finish
         cudaThreadSynchronize();
         cudaMemcpy(counter2, counter, (bin_num+1)*sizeof(int), cudaMemcpyDeviceToDevice);
         // cudaMemcpy(h_counter,counter+1,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
@@ -364,20 +360,9 @@ int main( int argc, char **argv )
 
 
         ////////////////////////////////////////////////////////////////////////////
-        // for(int i = 0;i<bin_num;i++){
-        //   printf("bin %d number %d\n",i,h_counter[i]);
-        // }
-        // for(int i=1; i<bin_num;i++){
-        //   h_counter[i]+=h_counter[i-1];
-        // }
-        //cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
-        // for(int i = 0;i<bin_num;i++){
-        //   printf("bin %d number %d\n",i,h_counter[i]);
-        // }
+
         putParticles<<<blks,NUM_THREADS>>>(d_particles,n,counter+1,binSize, bins_row,bin_seperate_p);
 
-        //printf("put new particles finished \n");
-        //cudaThreadSynchronize();
         //
         //  compute forces
         //
@@ -385,7 +370,6 @@ int main( int argc, char **argv )
         //cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
         std::swap(d_particles,bin_seperate_p);
 	      compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n, bins_row, counter2+1,binSize);
-        //copy_back<<<blks, NUM_THREADS>>>(bin_seperate_p,d_particles,n,bins_row,counter,off_set,return_counter);
         //
         //  move particles
         //
@@ -401,14 +385,6 @@ int main( int argc, char **argv )
     }
     cudaThreadSynchronize();
     simulation_time = read_timer( ) - simulation_time;
-    // int *count_h = (int*)malloc(bin_num*sizeof(int));
-    // cudaMemcpy(count_h,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
-    //int sum = 0;
-    // for(int i = 0; i <=bin_num;i++){
-    //   printf("bin[%d] = %d\n" ,i, count_h[i]);
-    //   sum += count_h[i];
-    // }
-    //printf("sum of all particles is %d\n" ,sum);
 
     printf( "CPU-GPU copy time = %g seconds\n", copy_time);
     printf( "n = %d, simulation time = %g seconds\n", n, simulation_time );
