@@ -1,0 +1,14 @@
+./gpu -n 2000 -o gpu.txt
+./autocorrect -s gpu.txt
+./gpu -n 4000 -o gpu.txt
+./autocorrect -s gpu.txt
+./gpu -n 8000 -o gpu.txt
+./autocorrect -s gpu.txt
+./gpu -n 16000 -o gpu.txt
+./autocorrect -s gpu.txt
+./gpu -n 80000 -o gpu.txt
+./autocorrect -s gpu.txt
+./gpu -n 100000 -o gpu.txt
+./autocorrect -s gpu.txt
+./gpu -n 160000 -o gpu.txt
+./autocorrect -s gpu.txt
