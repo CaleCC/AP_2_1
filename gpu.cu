@@ -310,7 +310,7 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     //printf("start steps \n");
     //for( int step = 0; step < NSTEPS; step++ )
-    for( int step = 0; step <  10; step++ )
+    for( int step = 0; step <  NSTEPS; step++ )
     {
         //compute the number of blocks
         int blks =(n + NUM_THREADS - 1) / NUM_THREADS;
@@ -353,14 +353,14 @@ int main( int argc, char **argv )
         // Wait for all instances to finished
         cudaThreadSynchronize();
         cudaMemcpy(counter2, counter, (bin_num+1)*sizeof(int), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(h_counter,counter+1,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
-        for(int i = 0;i<bin_num;i++){
-          printf("counter 1 bin %d number %d\n",i,h_counter[i]);
-        }
-        cudaMemcpy(h_counter,counter2+1,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
-        for(int i = 0;i<bin_num;i++){
-          printf("counter 2 bin %d number %d\n",i,h_counter[i]);
-        }
+        // cudaMemcpy(h_counter,counter+1,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
+        // for(int i = 0;i<bin_num;i++){
+        //   printf("counter 1 bin %d number %d\n",i,h_counter[i]);
+        // }
+        // cudaMemcpy(h_counter,counter2+1,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
+        // for(int i = 0;i<bin_num;i++){
+        //   printf("counter 2 bin %d number %d\n",i,h_counter[i]);
+        // }
 
 
         ////////////////////////////////////////////////////////////////////////////
