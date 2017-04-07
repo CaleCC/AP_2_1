@@ -192,6 +192,43 @@ __global__ void copy_back(particle_t* bin_seperate_p,particle_t* d_particles,int
     }
   }
 }
+__global__ void upTree(int *device_output, int len, int interval)
+{
+    int index = ((blockIdx.x * blockDim.x + threadIdx.x) + 1) * interval - 1;
+    if(index <= len){
+        device_output[index] += device_output[index - interval / 2];
+    }
+
+}
+
+__global__ void downTree(int *device_output, int len, int interval)
+{
+    //set last element zero when first called
+    if(interval >= len){
+        device_output[len - 1] = 0;
+    }
+
+    int index = ((blockIdx.x * blockDim.x + threadIdx.x) + 1) * interval - 1;
+    if(index < len){
+        int temp = device_output[index];
+        device_output[index] += device_output[index - interval / 2];
+        device_output[index - interval / 2] = temp;
+     }
+
+}
+
+
+int powerFloor(int len)
+{
+	int rounded = 1;
+	while (rounded * 2 < len)
+	{
+		rounded *= 2;
+	}
+	return rounded;
+}
+
+
 
 
 
@@ -240,9 +277,12 @@ int main( int argc, char **argv )
 
     //a counter to keep the number of particles in each bin
     int* counter;
+    int* counter2;
     cudaMalloc((void **) &counter, (bin_num+1)* sizeof(int));
+    cudaMalloc((void **) &counter2, (bin_num+1)* sizeof(int));
 
-    cudaMemset(counter, 0, (bin_num+1) * sizeof(int));//set counter to zero
+    cudaMemset(counter, 0, (bin_num+2) * sizeof(int));//set counter to zero
+    cudaMemset(counter2, 0, (bin_num+2) * sizeof(int));//set counter to zero
     counter+=1;
     int* h_counter = (int*)malloc(bin_num*sizeof(int));
     /*int* return_counter;
@@ -272,7 +312,7 @@ int main( int argc, char **argv )
     for( int step = 0; step <  NSTEPS; step++ )
     {
         //compute the number of blocks
-        int blks = (n + NUM_THREADS - 1) / NUM_THREADS;
+        int blks =(n + NUM_THREADS - 1) / NUM_THREADS;
         //printf("new setp bigins \n");
         //count the number of particles in each bins
         cudaMemset(counter, 0, (bin_num) * sizeof(int));//set counter to zero
@@ -285,17 +325,49 @@ int main( int argc, char **argv )
 
         //cuda calculate the prefix sum
         cudaMemcpy(h_counter,counter,bin_num*sizeof(int),cudaMemcpyDeviceToHost);
-        // for(int i = 0;i<bin_num;i++){
-        //   printf("bin %d number %d\n",i,h_counter[i]);
-        // }
-        for(int i=1; i<bin_num;i++){
-          h_counter[i]+=h_counter[i-1];
+        //////////////////////////////////////////////////////////////////////////
+        int powerf = powerFloor(bin_num+1);
+        int powerc = powerf * 2;
+        // Since in-place algorithm is used, we did not allocate device_input
+        // launch_scan(roundedLen, device_output, 256);
+        // Up Tree
+
+        for(int interval = 2; interval <= powerf; interval *= 2){
+            int numBlocks = (powerc / interval + NUM_THREADS - 1) / NUM_THREADS;
+            upTree<<<numBlocks, NUM_THREADS>>>(counter, powerc, interval);
+
         }
-        cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
+
+
+
+
+        for(int interval = powerf * 2; interval >= 1; interval /= 2){
+            int numBlocks = (powerc / interval + NUM_THREADS - 1) / NUM_THREADS;
+            downTree<<<numBlocks, NUM_THREADS>>>(counter, powerc, interval);
+        }
+        //counter = counter+1;
+
+
+
+        // Wait for all instances to finished
+        cudaThreadSynchronize();
+        cudaMemcpy(counter2, particles, bin_num+1, cudaMemcpyDeviceToDevice);
+
+
+
+
+        ////////////////////////////////////////////////////////////////////////////
         // for(int i = 0;i<bin_num;i++){
         //   printf("bin %d number %d\n",i,h_counter[i]);
         // }
-        putParticles<<<blks,NUM_THREADS>>>(d_particles,n,counter,binSize, bins_row,bin_seperate_p);
+        // for(int i=1; i<bin_num;i++){
+        //   h_counter[i]+=h_counter[i-1];
+        // }
+        //cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
+        // for(int i = 0;i<bin_num;i++){
+        //   printf("bin %d number %d\n",i,h_counter[i]);
+        // }
+        putParticles<<<blks,NUM_THREADS>>>(d_particles,n,counter+1,binSize, bins_row,bin_seperate_p);
 
         //printf("put new particles finished \n");
         //cudaThreadSynchronize();
@@ -303,9 +375,9 @@ int main( int argc, char **argv )
         //  compute forces
         //
         //sent prefix sum value to counter again for force computation
-        cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
+        //cudaMemcpy(counter,h_counter,bin_num*sizeof(int),cudaMemcpyHostToDevice);
         std::swap(d_particles,bin_seperate_p);
-	      compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n, bins_row, counter,binSize);
+	      compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n, bins_row, counter+1,binSize);
         //copy_back<<<blks, NUM_THREADS>>>(bin_seperate_p,d_particles,n,bins_row,counter,off_set,return_counter);
         //
         //  move particles
